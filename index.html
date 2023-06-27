@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://unpkg.com/fengari-web/dist/fengari-web.js"></script>
+<script>
+function runLua() {
+  var code = document.getElementById("code").value;
+  var output = document.getElementById("output");
+  output.innerHTML = "";
+  try {
+    // create a new Lua state
+    var L = fengari.lauxlib.luaL_newstate();
+    // open standard libraries
+    fengari.lualib.luaL_openlibs(L);
+    // override the print function
+    fengari.lua.lua_pushjsfunction(L, function(L) {
+      var n = fengari.lua.lua_gettop(L); // number of arguments
+      var arr = [];
+      for (var i = 1; i <= n; i++) {
+        arr.push(fengari.lua.lua_tojsstring(L, i)); // convert to JS string
+      }
+      output.innerHTML += arr.join("\t") + "\n"; // append to output element
+      return 0;
+    });
+    fengari.lua.lua_setglobal(L, fengari.to_luastring("print")); // set global print
+    // load and run the code
+    var result = fengari.lauxlib.luaL_loadstring(L, fengari.to_luastring(code));
+    if (result === fengari.lua.LUA_OK) {
+      result = fengari.lua.lua_pcall(L, 0, -1, 0);
+    }
+    if (result !== fengari.lua.LUA_OK) {
+      throw new Error(fengari.lua.lua_tojsstring(L, -1));
+    }
+  } catch (error) {
+    output.innerHTML += error + "\n";
+  }
+}
+</script>
+</head>
+<body>
+<h1>Lua Sandbox</h1>
+<textarea id="code" rows="10" cols="80"></textarea><br>
+<button onclick="runLua()">Run</button><br>
+<div id="output"></div>
+</body>
+</html>
